@@ -1,60 +1,36 @@
 #!/bin/bash
 
-set -e
+# URL directa (RAW) de tu archivo mh-c521.json en el repositorio
+URL_JSON="http://raw.githubusercontent.com/jse-che/actualizacion-cortina/refs/heads/main/mh-c521.json"
 
-# URL directa del archivo JSON en GitHub
-URL_JSON="https://raw.githubusercontent.com/jse-che/actualizacion-cortina/main/mh-c521.json"
-
-# Archivo de destino Z-Wave JS UI
+# Ruta de destino final
 DESTINO="/home/cat/zwave-js-ui-store/.config-db/devices/0x015f/mh-c521.json"
 
-# Archivo de configuración de Home Assistant
+echo "Descargando mh-c521.json desde el repositorio..."
+if curl -sSL "$URL_JSON" -o "$DESTINO"; then
+    echo "¡Archivo reemplazado con éxito en $DESTINO!"
+else
+    echo "Error: No se pudo descargar el archivo desde el repositorio." >&2
+    exit 1
+fi
+
+# Agregar configuración de Alexa Smart Home
 CONFIG="/home/cat/config/configuration.yaml"
 
-echo "=========================================="
-echo " Actualización de cortina y configuración Alexa"
-echo "=========================================="
-
-# 1. Descargar y reemplazar mh-c521.json
-echo ""
-echo "Descargando mh-c521.json desde GitHub..."
-
-if curl -fsSL "$URL_JSON" -o "${DESTINO}.tmp"; then
-    if python -m json.tool "${DESTINO}.tmp" >/dev/null 2>&1; then
-        cp -p "$DESTINO" "${DESTINO}.bak" 2>/dev/null || true
-        mv "${DESTINO}.tmp" "$DESTINO"
-        echo "Archivo JSON actualizado correctamente."
-    else
-        rm -f "${DESTINO}.tmp"
-        echo "ERROR: El archivo descargado no es un JSON válido." >&2
-        exit 1
-    fi
-else
-    rm -f "${DESTINO}.tmp"
-    echo "ERROR: No se pudo descargar el archivo JSON." >&2
-    exit 1
-fi
-
-# 2. Comprobar que existe configuration.yaml
-echo ""
-echo "Revisando configuration.yaml..."
+echo "Revisando configuración de Alexa..."
 
 if [ ! -f "$CONFIG" ]; then
-    echo "ERROR: No existe el archivo $CONFIG" >&2
+    echo "Error: No se encontró $CONFIG" >&2
     exit 1
 fi
 
-# 3. Agregar Alexa solo si no existe ya el bloque
-if grep -Eq '^[[:space:]]*alexa:[[:space:]]*(#.*)?$' "$CONFIG"; then
-    echo "Ya existe una sección 'alexa:' en configuration.yaml."
-    echo "No se modifica automáticamente para evitar duplicados."
-    echo "Revisa si ya tiene la configuración smart_home requerida."
+if grep -Eq '^alexa:[[:space:]]*(#.*)?$' "$CONFIG"; then
+    echo "La sección alexa: ya existe. No se realizaron cambios."
 else
     cp -p "$CONFIG" "${CONFIG}.bak"
 
     cat >> "$CONFIG" <<'YAML'
 
-# Configuración Alexa Smart Home
 alexa:
   smart_home:
     filter:
@@ -69,9 +45,8 @@ alexa:
         - script
 YAML
 
-    echo "Configuración Alexa agregada correctamente."
-    echo "Copia de seguridad: ${CONFIG}.bak"
+    echo "Configuración de Alexa agregada correctamente."
+    echo "Copia de seguridad creada en ${CONFIG}.bak"
 fi
 
-echo ""
 echo "Proceso finalizado."
