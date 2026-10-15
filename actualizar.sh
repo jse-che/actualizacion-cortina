@@ -51,4 +51,7 @@ YAML
 fi
 
 echo "Proceso finalizado."
+<<<<<<< HEAD
 ```
+=======
+>>>>>>> 4bfd6d558c82892b01ac8a4f943b5f5e0bc21f2c
